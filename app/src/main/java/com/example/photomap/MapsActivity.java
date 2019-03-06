@@ -28,11 +28,13 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 
-public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, Button.OnClickListener {
+public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback,
+        Button.OnClickListener, GoogleMap.OnMarkerClickListener {
 
     private GoogleMap mMap;
     FusedLocationProviderClient client;
@@ -145,10 +147,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
             startActivityForResult(intent, 0);
         } else if (v == close) {
-
+            close.setVisibility(View.INVISIBLE);
+            display.setVisibility(View.INVISIBLE);
         }
 
     }
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -161,14 +165,26 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             //if you know for a fact there will be a bundle, you can use  data.getExtras().get("Data");  but we don't know.
             Bitmap bp = (Bitmap) extras.get("data");
 
-            mMap.addMarker(new MarkerOptions()
+            Marker temp = mMap.addMarker(new MarkerOptions()
                     .position(markerPos)
                     .icon(BitmapDescriptorFactory.fromBitmap(bp)));
+            temp.setTag(bp);
+            mMap.setOnMarkerClickListener(this);
+
             mMap.moveCamera(CameraUpdateFactory.newLatLng(markerPos));
             Toast.makeText(this, "We got a picture", Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(this, "No picture was returned", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    @Override
+    public boolean onMarkerClick(Marker marker) {
+        display.setVisibility(View.VISIBLE);
+        close.setVisibility(View.VISIBLE);
+        display.setImageBitmap((Bitmap)marker.getTag());
+
+        return true;
     }
 
     //@Override
