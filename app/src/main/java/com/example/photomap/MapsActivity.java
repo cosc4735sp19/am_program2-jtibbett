@@ -2,6 +2,7 @@ package com.example.photomap;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.location.Location;
@@ -17,10 +18,15 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResponse;
+import com.google.android.gms.location.SettingsClient;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -32,9 +38,12 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 
 public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback,
         Button.OnClickListener, GoogleMap.OnMarkerClickListener {
+
+    private static final int REQUEST_CHECK_SETTINGS = 0x1;
 
     private GoogleMap mMap;
     FusedLocationProviderClient client;
@@ -44,6 +53,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     LatLng markerPos;
     ImageView display;
     Button close;
+
+    private LocationCallback locationCallback;
+    LocationRequest locationRequest;
+    LocationSettingsRequest.Builder builder;
 
 
     public MapsActivity() {
@@ -67,6 +80,19 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         display = findViewById(R.id.display);
         display.setVisibility(View.INVISIBLE);
 
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult == null) {
+                    return;
+                }
+                for (Location location : locationResult.getLocations()) {
+                    Log.wtf("Location Update", "The location has been updated");
+                    lastLocation = location;
+                }
+            };
+        };
+
     }
 
 
@@ -89,6 +115,29 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
 
         client = LocationServices.getFusedLocationProviderClient(this);
+        createLocationRequest();
+        builder = new LocationSettingsRequest.Builder().addLocationRequest(locationRequest);
+        SettingsClient client = LocationServices.getSettingsClient(this);
+        Task<LocationSettingsResponse> task = client.checkLocationSettings(builder.build());
+        task.addOnFailureListener(this, new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                if (e instanceof ResolvableApiException) {
+                    // Location settings are not satisfied, but this can be fixed
+                    // by showing the user a dialog.
+                    try {
+                        // Show the dialog by calling startResolutionForResult(),
+                        // and check the result in onActivityResult().
+                        ResolvableApiException resolvable = (ResolvableApiException) e;
+                        resolvable.startResolutionForResult(MapsActivity.this,
+                                REQUEST_CHECK_SETTINGS);
+                    } catch (IntentSender.SendIntentException sendEx) {
+                        // Ignore the error.
+                    }
+                }
+            }
+        });
+        startLocationUpdates();
 
         // Add a marker in Sydney and move the camera
         /*LatLng sydney = new LatLng(-34, 151);
@@ -123,24 +172,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             if ((checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) &&
                     (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
-
-                client.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
-                    @Override
-                    public void onSuccess(Location location) {
-                        if (location != null) {
-                            lastLocation = location;
-                            markerPos = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
-                        } else {
-                            Log.wtf(TAG, "location is null!!!");
-                        }
-                    }
-                })
-                        .addOnFailureListener(this, new OnFailureListener() {
-                            @Override
-                            public void onFailure(@NonNull Exception e) {
-                                Log.w("Map Activity", "getLastLocation:onFailure", e);
-                            }
-                        });
+                markerPos = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
             }
 
 
@@ -187,6 +219,34 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         return true;
     }
 
-    //@Override
+    private void startLocationUpdates(){
+        client.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
+            @Override
+            public void onSuccess(Location location) {
+                if (location != null) {
+                    lastLocation = location;
+                    markerPos = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
+                } else {
+                    Log.wtf("Location Updates", "location is null!!!");
+                }
+            }
+        })
+                .addOnFailureListener(this, new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.w("Location Updates", "getLastLocation:onFailure", e);
+                    }
+                });
+
+
+        client.requestLocationUpdates(locationRequest, locationCallback,null);
+    }
+
+    private void createLocationRequest(){
+        locationRequest = LocationRequest.create();
+        locationRequest.setInterval(7000);
+        locationRequest.setFastestInterval(5000);
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+    }
 }
 
