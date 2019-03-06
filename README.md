@@ -1,4 +1,4 @@
-# Program # X
+# Program # 2
 Name:  Johnathan Tibbetts
 Cosc 4735
 
