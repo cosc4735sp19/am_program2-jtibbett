@@ -36,23 +36,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private GoogleMap mMap;
     FusedLocationProviderClient client;
-    FloatingActionButton button ;
+    FloatingActionButton button;
     int request;
     Location lastLocation;
     LatLng markerPos;
     ImageView display;
     Button close;
 
-    LocationRequest mLocationRequest;
-    LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
-    builder.addLocationRequest(mLocationRequest);
-    LocationSettingsRequest = builder.build();
 
-
-
-
-
-    public MapsActivity(){}
+    public MapsActivity() {
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,9 +81,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        if((checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ) ||
-        (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)){
-            ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.ACCESS_FINE_LOCATION},request);
+        if ((checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) ||
+                (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, request);
         }
 
         client = LocationServices.getFusedLocationProviderClient(this);
@@ -104,15 +97,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults){
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
 
         if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // permission was granted, yay! Do the
-                    // contacts-related task you need to do.
-            checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION);
+            // permission was granted, yay! Do the
+            // contacts-related task you need to do.
+            //checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION);
 
-        }
-        else {
+        } else {
             // permission denied, boo! Disable the
             // functionality that depends on this permission.
             finish();
@@ -125,30 +117,34 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         //getLastLocation();
         final String TAG = "Map Activity";
         //create an intent to have the default camera app take a picture and return the picture.
-        if(v == button) {
+        if (v == button) {
 
             if ((checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) &&
                     (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
+
                 client.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
                     @Override
                     public void onSuccess(Location location) {
-                        lastLocation = location;
-                        markerPos = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
+                        if (location != null) {
+                            lastLocation = location;
+                            markerPos = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
+                        } else {
+                            Log.wtf(TAG, "location is null!!!");
+                        }
                     }
                 })
                         .addOnFailureListener(this, new OnFailureListener() {
                             @Override
                             public void onFailure(@NonNull Exception e) {
-                                Log.w(TAG, "getLastLocation:onFailure", e);
+                                Log.w("Map Activity", "getLastLocation:onFailure", e);
                             }
                         });
-
-
             }
+
+
             Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
             startActivityForResult(intent, 0);
-        }
-        else if(v == close){
+        } else if (v == close) {
 
         }
 
@@ -164,11 +160,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (extras != null) {
             //if you know for a fact there will be a bundle, you can use  data.getExtras().get("Data");  but we don't know.
             Bitmap bp = (Bitmap) extras.get("data");
+
             mMap.addMarker(new MarkerOptions()
                     .position(markerPos)
                     .icon(BitmapDescriptorFactory.fromBitmap(bp)));
             mMap.moveCamera(CameraUpdateFactory.newLatLng(markerPos));
-            Toast.makeText(this,"We got a picture", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "We got a picture", Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(this, "No picture was returned", Toast.LENGTH_SHORT).show();
         }
