@@ -11,3 +11,7 @@ Description:
 
 Anything that doesn't work:
 Everything works but an important note is that the location updates every 7 seconds.
+
+# Graded: 50/50 #
+
+* Everything works as expected
